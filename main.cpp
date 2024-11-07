@@ -16,13 +16,15 @@ int main()
     list_push(list, 0, 40);
     graph_dump(list);
 
-    list_push_back(list, 10);
+    list_pop_back(list);
     graph_dump(list);
-    list_push_back(list, 20);
+    list_pop_back(list);
     graph_dump(list);
-    list_push_back(list, 30);
+    list_pop_back(list);
     graph_dump(list);
-    list_push_back(list, 40);
+    list_pop_back(list);
+    graph_dump(list);
+    list_pop_back(list);
     graph_dump(list);
 
     list_destroy(list);

@@ -40,23 +40,19 @@ int list_push_back (struct list_t* list, elem_type val)
     return 0;
 }
 
+int list_push_front (struct list_t* list, elem_type val)
+{
+    return list_push(list, 0, val);
+}
+
 int list_pop_back (struct list_t* list)
 {
-    if (list->size == 0)
-    {
-        fprintf(stderr, "EMPTY LIST\n");
-        return 1;
-    }
-    /*list->ptr[list->head].next = - list->free;
+    return list_pop(list, list->size - 1);
+}
 
-    list->free = list->head;
-    list->head = list->ptr[list->head].prev;
-
-    list->ptr[list->free].val = POISON;
-    list->ptr[list->head].next = 0;
-    list->size--;*/
-
-    return 0;
+int list_pop_front (struct list_t* list)
+{
+    return list_pop (list, 0);
 }
 
 int list_push(struct list_t* list, int numb, elem_type val)
@@ -88,36 +84,26 @@ int list_push(struct list_t* list, int numb, elem_type val)
     return 0;
 }
 
-int list_push_front (struct list_t* list, elem_type val)
-{
-    return list_push(list, 0, val);
-}
-
-int list_pop_front (struct list_t* list)
+int list_pop (struct list_t* list, int numb)
 {
     if (list->size == 0)
     {
         fprintf(stderr, "EMPTY LIST\n");
         return 1;
     }
-    int prev_free = list->free;
-    list->ptr[list->tail].prev = 0;
-    list->ptr[list->tail].val = POISON;
-    list->free = list->tail;
-    list->tail = list->ptr[list->tail].next;
-    list->ptr[list->free].next = - prev_free;
+    int i = list->ptr[index(list, numb)].next;
+    int i_plus_1 = list->ptr[i].next;
+    int i_minus_1 = list->ptr[i].prev;
+
+    list->ptr[i].next = - list->free;
+    list->ptr[i].prev = 0;
+    list->ptr[i].val = POISON;
+    list->free = i;
+
+    list->ptr[i_plus_1].prev = i_minus_1;
+    list->ptr[i_minus_1].next = i_plus_1;
+
     list->size--;
-
-    /*
-    list->ptr[list->head].next = - list->free;
-
-    list->free = list->head;
-    list->head = list->ptr[list->head].prev;
-
-    list->ptr[list->free].val = POISON;
-    list->ptr[list->head].next = 0;
-    list->size--;
-    */
     return 0;
 }
 
@@ -196,9 +182,7 @@ void graph_dump (const struct list_t* list)
                     i, i, list->ptr[i].next, list->ptr[i].val, list->ptr[i].prev);
         fprintf(fp, "\t\t</TABLE>>];\n");
         i = list->ptr[i].next;
-        //fprintf(stderr, "i = %d\n", i);
     } while (i != 0);
-    //fprintf(stderr, "\n");
     fprintf(fp, "\t}\n");
 
     i = 0;
@@ -228,8 +212,6 @@ void graph_dump (const struct list_t* list)
         i = - list->ptr[i].next;
     }
     fprintf(fp, "\t}\n}");
-    /*fprintf(fp, "\n}\nnode[shape=rect];\n{\n");
-    fprintf(fp, "{free -> %d; head -> %d; tail -> %d}\n}\n}", list->free, list->head, list->tail);*/
     fclose(fp);
     char command[100];
     sprintf(command, "dot -Tpng %s -o %s", dot_name, png_name);

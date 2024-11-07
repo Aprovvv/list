@@ -24,6 +24,7 @@ struct list_t* list_init (int start_size);
 int list_push_front (struct list_t* list, elem_type val);
 int list_pop_front (struct list_t* list);
 int list_push(struct list_t* list, int numb, elem_type val);
+int list_pop (struct list_t* list, int numb);
 int list_destroy (struct list_t* list);
 int list_push_back (struct list_t* list, elem_type val);
 int list_pop_back (struct list_t* list);
