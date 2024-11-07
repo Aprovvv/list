@@ -3,20 +3,8 @@
 
 typedef int elem_type;
 
-struct list_elem
-{
-    int prev;
-    elem_type val;
-    int next;
-};
-
-struct list_t
-{
-    struct list_elem* ptr;
-    size_t size;
-    size_t capacity;
-    int free;
-};
+struct list_elem;
+struct list_t;
 
 struct list_t* list_init (size_t start_capacity);
 int list_destroy (struct list_t* list);

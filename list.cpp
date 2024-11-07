@@ -2,6 +2,21 @@
 #include <stdlib.h>
 #include "list.h"
 
+struct list_elem
+{
+    int prev;
+    elem_type val;
+    int next;
+};
+
+struct list_t
+{
+    struct list_elem* ptr;
+    size_t size;
+    size_t capacity;
+    int free;
+};
+
 const elem_type POISON = -666;
 
 static int index(struct list_t* list, int numb);
@@ -11,6 +26,8 @@ struct list_t* list_init (size_t start_capacity)
 {
     struct list_t* list = (struct list_t*)calloc(sizeof(struct list_t), 1);
     list->ptr = (struct list_elem*)calloc(sizeof(struct list_elem), start_capacity + 1);
+    if (list->ptr == NULL)
+        return NULL;
     list->capacity = start_capacity;
     list->size = 0;
     list->free = 1;
@@ -57,7 +74,8 @@ int list_push(struct list_t* list, int numb, elem_type val)
 {
     if (list->size >= list->capacity)
     {
-        resize(list, list->capacity*2 + 1);
+        if (resize(list, list->capacity*2 + 1) == 0)
+            return 1;
         list->capacity *= 2;
     }
 
@@ -131,8 +149,8 @@ void graph_dump (const struct list_t* list)
         system("rm dots/*.dot");
         system("rm pngs/*.png");
     }
-    char dot_name[100];
-    char png_name[100];
+    char dot_name[20];
+    char png_name[20];
     sprintf(dot_name, "dots/%d.dot", numb);
     sprintf(png_name, "pngs/%d.png", numb);
     FILE* fp = fopen(dot_name, "w");
@@ -184,7 +202,7 @@ void graph_dump (const struct list_t* list)
     }
     fprintf(fp, "\t}\n}");
     fclose(fp);
-    char command[100];
+    char command[55];
     sprintf(command, "dot -Tpng %s -o %s", dot_name, png_name);
     system(command);
 }
@@ -210,11 +228,11 @@ static int resize(struct list_t* list, size_t new_capacity)
     if (list->capacity > new_capacity)
         return 0;
 
-    for (int i = list->capacity + 1; i < new_capacity; i++)
+    for (size_t i = list->capacity + 1; i < new_capacity; i++)
     {
         list->ptr[i].prev = 0;
         list->ptr[i].val = POISON;
-        list->ptr[i].next = - (i + 1);
+        list->ptr[i].next = - ((int)i + 1);
     }
 
     return 0;
