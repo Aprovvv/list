@@ -4,20 +4,25 @@
 
 int main()
 {
-    struct list_t* list = list_init(5);
+    struct list_t* list = list_init(10);
+
     graph_dump(list);
-    list_push_back(list, 52);
+    list_push_front(list, 10);
     graph_dump(list);
-    list_push_back(list, 42);
+    list_push_front(list, 20);
     graph_dump(list);
-    list_pop_back(list);
+    list_push(list, 0, 30);
     graph_dump(list);
-    list_pop_back(list);
-    text_dump(list);
+    list_push(list, 0, 40);
     graph_dump(list);
 
-    list_pop_back(list);
-    text_dump(list);
+    list_push_back(list, 10);
+    graph_dump(list);
+    list_push_back(list, 20);
+    graph_dump(list);
+    list_push_back(list, 30);
+    graph_dump(list);
+    list_push_back(list, 40);
     graph_dump(list);
 
     list_destroy(list);
