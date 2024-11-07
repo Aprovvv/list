@@ -4,28 +4,14 @@
 
 int main()
 {
-    struct list_t* list = list_init(10);
+    struct list_t* list = list_init(4);
 
-    graph_dump(list);
-    list_push_front(list, 10);
-    graph_dump(list);
-    list_push_front(list, 20);
-    graph_dump(list);
-    list_push(list, 0, 30);
-    graph_dump(list);
-    list_push(list, 0, 40);
-    graph_dump(list);
-
-    list_pop_back(list);
-    graph_dump(list);
-    list_pop_back(list);
-    graph_dump(list);
-    list_pop_back(list);
-    graph_dump(list);
-    list_pop_back(list);
-    graph_dump(list);
-    list_pop_back(list);
-    graph_dump(list);
+    for (int i = 1; i <= 20; i++)
+    {
+        list_push_back(list, i*10);
+        text_dump(list);
+        graph_dump(list);
+    }
 
     list_destroy(list);
 }
