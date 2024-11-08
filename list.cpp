@@ -74,7 +74,7 @@ int list_push(struct list_t* list, int numb, elem_type val)
 {
     if (list->size >= list->capacity)
     {
-        if (resize(list, list->capacity*2 + 1) == 0)
+        if (resize(list, list->capacity*2 + 1) == 1)
             return 1;
         list->capacity *= 2;
     }
@@ -218,7 +218,7 @@ static int index(struct list_t* list, int numb)
 
 static int resize(struct list_t* list, size_t new_capacity)
 {
-    fprintf(stderr, "realloc\n");
+    //fprintf(stderr, "realloc\n");
     list_elem* temp_ptr = list->ptr;
     temp_ptr = (list_elem*)realloc(temp_ptr, new_capacity*sizeof(list_elem));
     if (temp_ptr == NULL)
