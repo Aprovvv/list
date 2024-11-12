@@ -4,7 +4,7 @@
 
 int main()
 {
-    struct list_t* list = list_init(6);
+    struct list_t* list = list_init(11);
 
     for (int i = 1; i <= 5; i++)
     {
