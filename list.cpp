@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include "list.h"
 
-//TODO: get_next, get_prev, get_start, get_end
-//TODO: push и pop получают node*
 //TODO: должен возвращать указатель на узел, который вставил.
 
 struct list_node
@@ -15,7 +13,7 @@ struct list_node
 
 struct list_t
 {
-    struct list_node* ptr;
+    list_node* ptr;
     size_t size;
     size_t capacity;
     list_node* free;
@@ -23,13 +21,12 @@ struct list_t
 
 const elem_type POISON = -666;
 
-static int index(struct list_t* list, int numb);
-static int resize(struct list_t* list, size_t new_capacity);
+static int resize (list_t* list, size_t new_capacity);
 
-struct list_t* list_init (size_t start_capacity)
+list_t* list_init (size_t start_capacity)
 {
-    struct list_t* list = (struct list_t*)calloc(sizeof(struct list_t), 1);
-    list->ptr = (struct list_node*)calloc(sizeof(struct list_node), start_capacity + 1);
+    list_t* list = (list_t*)calloc(sizeof(list_t), 1);
+    list->ptr = (list_node*)calloc(sizeof(list_node), start_capacity + 1);
     if (list->ptr == NULL)
         return NULL;
     list->capacity = start_capacity;
@@ -47,110 +44,60 @@ struct list_t* list_init (size_t start_capacity)
     return list;
 }
 
-int list_destroy (struct list_t* list)
+int list_destroy (list_t* list)
 {
     free(list->ptr);
     free(list);
     return 0;
 }
 
-list_node* get_next(list_node* node)
-{
-    return node->next;
-}
-
-list_node* get_prev(list_node* node)
-{
-    return node->prev;
-}
-
-list_node* get_start(struct list_t* list)
-{
-    return list->ptr[0].next;
-}
-
-list_node* get_end(list_t* list)
-{
-    return list->ptr[0].prev;
-}
-
-int list_push_back (struct list_t* list, elem_type val)
-{
-    return list_insert(list, (int)list->size, val);
-}
-
-int list_push_front (struct list_t* list, elem_type val)
-{
-    return list_insert(list, 0, val);
-}
-
-int list_pop_back (struct list_t* list)
-{
-    return list_pop(list, (int)list->size - 1);
-}
-
-int list_pop_front (struct list_t* list)
-{
-    return list_pop (list, 0);
-}
-
-int list_insert(struct list_t* list, int numb, elem_type val)
+list_node* list_insert (list_t* list, list_node* node, elem_type val)
 {
     if (list->size >= list->capacity)
     {
         if (resize(list, list->capacity*2 + 1) == 1)
-            return 1;
+            return NULL;
         list->capacity *= 2;
     }
 
-    int i = index(list, numb);
-    list_node* i_plus_1 = list->ptr[i].next;
+    list_node* next_node = node->next;
 
-    list->free->prev = list->ptr + i;
-    i_plus_1->prev = list->free;
-    list->ptr[i].next = list->free;
+    list->free->prev = node;
+    next_node->prev = list->free;
+    node->next = list->free;
 
     list->free = list->free->next;
 
-    list->ptr[i].next->next = i_plus_1;
-    list->ptr[i].next->val = val;
+    node->next->next = next_node;
+    node->next->val = val;
 
     list->size++;
-    return 0;
+    return node->next;
 }
 
-int list_pop (struct list_t* list, int numb)
+list_node* list_pop (list_t* list, list_node* node)
 {
     if (list->size == 0)
     {
         fprintf(stderr, "EMPTY LIST\n");
-        return 1;
+        return NULL;
     }
-    int i = (int)(list->ptr[index(list, numb)].next - list->ptr);
-    list_node* i_plus_1 = list->ptr[i].next;
-    list_node* i_minus_1 = list->ptr[i].prev;
+    list_node* i_plus_1 = node->next;
+    list_node* i_minus_1 = node->prev;
 
-    list->ptr[i].next = list->free;
-    list->ptr[i].prev = NULL;
-    list->ptr[i].val = POISON;
-    list->free = list->ptr + i;
+    node->next = list->free;
+    node->prev = NULL;
+    node->val = POISON;
+    list->free = node;
 
     i_plus_1->prev = i_minus_1;
     i_minus_1->next = i_plus_1;
 
     list->size--;
-    return 0;
+    return i_plus_1;
 }
 
-elem_type list_show (struct list_t* list, int numb)
-{
-    if (numb >= (int)list->size)
-        return 1;
-
-    return list->ptr[index(list, numb)].val;
-}
-
-void text_dump (struct list_t* list)
+void text_dump (list_t* list)
 {
     fprintf(stderr, "--------------------------------------------\n");
     fprintf(stderr, "capacity = %zu ", list->capacity);
@@ -164,7 +111,7 @@ void text_dump (struct list_t* list)
     fprintf(stderr, "--------------------------------------------\n");
 }
 
-void graph_dump (const struct list_t* list)
+void graph_dump (const list_t* list)
 {
     static int numb = 0;
     numb++;
@@ -183,18 +130,23 @@ void graph_dump (const struct list_t* list)
                 "\t{\n"
                 "\t\trank=same\n");
     int i = 0;
+    list_node* node = list->ptr;
     do {
         fprintf(fp, "\t\t%d [label = <\n"
                     "\t\t<TABLE BORDER=\"0\" CELLBORDER=\"1\" "
                     "CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
                     "\t\t\t<TR><TD PORT=\"ip\">ip %d</TD></TR>\n"
+                    "\t\t\t<TR><TD PORT=\"addr\">addr %lX</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"next\">next %lX</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"val\">val %d</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"prev\">prev %lX</TD></TR>\n",
-                    i, i, (unsigned long)list->ptr[i].next%1000, list->ptr[i].val, (unsigned long)list->ptr[i].prev%1000);
+                    i, i, (unsigned long)node%10000,
+                    (unsigned long)list->ptr[i].next%10000, list->ptr[i].val,
+                    (unsigned long)list->ptr[i].prev%10000);
         fprintf(fp, "\t\t</TABLE>>];\n");
-        i = (int)(list->ptr[i].next - list->ptr);
-    } while (i != 0);
+        i = (int)(node->next - list->ptr);
+        node = node->next;
+    } while (node != list->ptr);
     fprintf(fp, "\t}\n");
 
     i = 0;
@@ -211,18 +163,23 @@ void graph_dump (const struct list_t* list)
 
     fprintf(fp, "{\nrank=same;\n");
     i = (int)(list->free - list->ptr);
+    node = list->free;
     while (i <= (int)list->capacity && i!= 0) {
         fprintf(fp, "\t\t%d [label = <\n"
                     "\t\t<TABLE BORDER=\"0\" CELLBORDER=\"1\" "
                     "CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
                     "\t\t\t<TR><TD PORT=\"ip\">ip %d</TD></TR>\n"
+                    "\t\t\t<TR><TD PORT=\"addr\">addr %lX</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"next\">next %lX</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"val\">val %d</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"prev\">prev %lX</TD></TR>\n",
-                    i, i, (unsigned long)list->ptr[i].next%1000, list->ptr[i].val, (unsigned long)list->ptr[i].prev%1000);
+                    i, i, (unsigned long)node%10000,
+                    (unsigned long)list->ptr[i].next%10000, list->ptr[i].val,
+                    (unsigned long)list->ptr[i].prev%10000);
         fprintf(fp, "\t\t</TABLE>>];\n");
         fprintf(fp, "\t%d:<next> -> %d;\n", i, (int)(list->ptr[i].next - list->ptr));
-        i = (int)(list->ptr[i].next - list->ptr);
+        i = (int)(node->next - list->ptr);
+        node = node->next;
     }
     fprintf(fp, "\t}\n}");
     fclose(fp);
@@ -231,18 +188,53 @@ void graph_dump (const struct list_t* list)
     system(command);
 }
 
-static int index(struct list_t* list, int numb)
+elem_type get_val (list_node* node)
 {
-    list_node* index = list->ptr;
-    for (int i = 0; i < numb; i++)
-        index = index->next;
-
-    return (int)(index - list->ptr);
+    return node->val;
 }
 
-static int resize(struct list_t* list, size_t new_capacity)
+list_node* get_next (list_node* node)
 {
-    //fprintf(stderr, "realloc\n");
+    return node->next;
+}
+
+list_node* get_prev (list_node* node)
+{
+    return node->prev;
+}
+
+list_node* get_start (list_t* list)
+{
+    return list->ptr[0].next;
+}
+
+list_node* get_end (list_t* list)
+{
+    return list->ptr[0].prev;
+}
+
+list_node* list_push_back (list_t* list, elem_type val)
+{
+    return list_insert(list, list->ptr[0].prev, val);
+}
+
+list_node* list_push_front (list_t* list, elem_type val)
+{
+    return list_insert(list, list->ptr, val);
+}
+
+list_node* list_pop_back (list_t* list)
+{
+    return list_pop(list, list->ptr[0].prev);
+}
+
+list_node* list_pop_front (list_t* list)
+{
+    return list_pop (list, list->ptr);
+}
+
+static int resize(list_t* list, size_t new_capacity)
+{
     list_node* temp_ptr = list->ptr;
     temp_ptr = (list_node*)realloc(temp_ptr, new_capacity*sizeof(list_node));
     if (temp_ptr == NULL)
