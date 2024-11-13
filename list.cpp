@@ -2,13 +2,11 @@
 #include <stdlib.h>
 #include "list.h"
 
-//TODO: должен возвращать указатель на узел, который вставил.
-
 struct list_node
 {
-    list_node* prev;
+    int prev;
     elem_type val;
-    list_node* next;
+    int next;
 };
 
 struct list_t
@@ -16,7 +14,7 @@ struct list_t
     list_node* ptr;
     size_t size;
     size_t capacity;
-    list_node* free;
+    int free;
 };
 
 const elem_type POISON = -666;
@@ -31,15 +29,15 @@ list_t* list_init (size_t start_capacity)
         return NULL;
     list->capacity = start_capacity;
     list->size = 0;
-    list->free = list->ptr + 1;
+    list->free = 1;
 
     list->ptr[0].val = 0;
-    list->ptr[0].next = list->ptr;
-    list->ptr[0].prev = list->ptr;
+    list->ptr[0].next = 0;
+    list->ptr[0].prev = 0;
     for (int i = 1; i <= (int)start_capacity; i++)
     {
         list->ptr[i].val = POISON;
-        list->ptr[i].next = list->ptr + i + 1;
+        list->ptr[i].next = - i - 1;
     }
     return list;
 }
@@ -59,20 +57,20 @@ list_node* list_insert (list_t* list, list_node* node, elem_type val)
             return NULL;
         list->capacity *= 2;
     }
+    int i = (int)(node - list->ptr);
+    int i_plus_1 = list->ptr[i].next;
 
-    list_node* next_node = node->next;
+    list->ptr[list->free].prev = i;
+    list->ptr[i_plus_1].prev = list->free;
+    list->ptr[i].next = list->free;
 
-    list->free->prev = node;
-    next_node->prev = list->free;
-    node->next = list->free;
+    list->free = - list->ptr[list->free].next;
 
-    list->free = list->free->next;
-
-    node->next->next = next_node;
-    node->next->val = val;
+    list->ptr[list->ptr[i].next].next = i_plus_1;
+    list->ptr[list->ptr[i].next].val = val;
 
     list->size++;
-    return node->next;
+    return list->ptr + list->ptr[i].next;
 }
 
 list_node* list_pop (list_t* list, list_node* node)
@@ -82,19 +80,20 @@ list_node* list_pop (list_t* list, list_node* node)
         fprintf(stderr, "EMPTY LIST\n");
         return NULL;
     }
-    list_node* i_plus_1 = node->next;
-    list_node* i_minus_1 = node->prev;
+    int i = (int)(node - list->ptr);
+    int i_plus_1 = list->ptr[i].next;
+    int i_minus_1 = list->ptr[i].prev;
 
-    node->next = list->free;
-    node->prev = NULL;
-    node->val = POISON;
-    list->free = node;
+    list->ptr[i].next = - list->free;
+    list->ptr[i].prev = 0;
+    list->ptr[i].val = POISON;
+    list->free = i;
 
-    i_plus_1->prev = i_minus_1;
-    i_minus_1->next = i_plus_1;
+    list->ptr[i_plus_1].prev = i_minus_1;
+    list->ptr[i_minus_1].next = i_plus_1;
 
     list->size--;
-    return i_plus_1;
+    return list->ptr + i_plus_1;
 }
 
 void text_dump (list_t* list)
@@ -102,16 +101,16 @@ void text_dump (list_t* list)
     fprintf(stderr, "--------------------------------------------\n");
     fprintf(stderr, "capacity = %zu ", list->capacity);
     fprintf(stderr, "size = %zu ", list->size);
-    fprintf(stderr, "free = %p\n", list->free);
+    fprintf(stderr, "free = %d\n", list->free);
     for (size_t i = 0; i <= list->capacity; i++)
     {
-        fprintf(stderr, "%zu: prev = %p; val = %d; next = %p\n",
+        fprintf(stderr, "%zu: prev = %d; val = %d; next = %d\n",
                 i, list->ptr[i].prev, list->ptr[i].val, list->ptr[i].next);
     }
     fprintf(stderr, "--------------------------------------------\n");
 }
 
-void graph_dump (const list_t* list)
+void graph_dump (const struct list_t* list)
 {
     static int numb = 0;
     numb++;
@@ -130,56 +129,46 @@ void graph_dump (const list_t* list)
                 "\t{\n"
                 "\t\trank=same\n");
     int i = 0;
-    list_node* node = list->ptr;
     do {
         fprintf(fp, "\t\t%d [label = <\n"
                     "\t\t<TABLE BORDER=\"0\" CELLBORDER=\"1\" "
                     "CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
                     "\t\t\t<TR><TD PORT=\"ip\">ip %d</TD></TR>\n"
-                    "\t\t\t<TR><TD PORT=\"addr\">addr %lX</TD></TR>\n"
-                    "\t\t\t<TR><TD PORT=\"next\">next %lX</TD></TR>\n"
+                    "\t\t\t<TR><TD PORT=\"next\">next %d</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"val\">val %d</TD></TR>\n"
-                    "\t\t\t<TR><TD PORT=\"prev\">prev %lX</TD></TR>\n",
-                    i, i, (unsigned long)node%10000,
-                    (unsigned long)list->ptr[i].next%10000, list->ptr[i].val,
-                    (unsigned long)list->ptr[i].prev%10000);
+                    "\t\t\t<TR><TD PORT=\"prev\">prev %d</TD></TR>\n",
+                    i, i, list->ptr[i].next, list->ptr[i].val, list->ptr[i].prev);
         fprintf(fp, "\t\t</TABLE>>];\n");
-        i = (int)(node->next - list->ptr);
-        node = node->next;
-    } while (node != list->ptr);
+        i = list->ptr[i].next;
+    } while (i != 0);
     fprintf(fp, "\t}\n");
 
     i = 0;
     do {
-        fprintf(fp, "\t%d:<next> -> %d;\n", i, (int)(list->ptr[i].next - list->ptr));
-        i = (int)(list->ptr[i].next - list->ptr);
+        fprintf(fp, "\t%d:<next> -> %d;\n", i, list->ptr[i].next);
+        i = list->ptr[i].next;
     } while (i != 0);
 
     i = 0;
     do {
-        fprintf(fp, "\t%d:<prev> -> %d;\n", i, (int)(list->ptr[i].prev - list->ptr));
-        i = (int)(list->ptr[i].next - list->ptr);
+        fprintf(fp, "\t%d:<prev> -> %d;\n", i, list->ptr[i].prev);
+        i = list->ptr[i].prev;
     } while (i != 0);
 
     fprintf(fp, "{\nrank=same;\n");
-    i = (int)(list->free - list->ptr);
-    node = list->free;
+    i = list->free;
     while (i <= (int)list->capacity && i!= 0) {
         fprintf(fp, "\t\t%d [label = <\n"
                     "\t\t<TABLE BORDER=\"0\" CELLBORDER=\"1\" "
                     "CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
                     "\t\t\t<TR><TD PORT=\"ip\">ip %d</TD></TR>\n"
-                    "\t\t\t<TR><TD PORT=\"addr\">addr %lX</TD></TR>\n"
-                    "\t\t\t<TR><TD PORT=\"next\">next %lX</TD></TR>\n"
+                    "\t\t\t<TR><TD PORT=\"next\">next %d</TD></TR>\n"
                     "\t\t\t<TR><TD PORT=\"val\">val %d</TD></TR>\n"
-                    "\t\t\t<TR><TD PORT=\"prev\">prev %lX</TD></TR>\n",
-                    i, i, (unsigned long)node%10000,
-                    (unsigned long)list->ptr[i].next%10000, list->ptr[i].val,
-                    (unsigned long)list->ptr[i].prev%10000);
+                    "\t\t\t<TR><TD PORT=\"prev\">prev %d</TD></TR>\n",
+                    i, i, list->ptr[i].next, list->ptr[i].val, list->ptr[i].prev);
         fprintf(fp, "\t\t</TABLE>>];\n");
-        fprintf(fp, "\t%d:<next> -> %d;\n", i, (int)(list->ptr[i].next - list->ptr));
-        i = (int)(node->next - list->ptr);
-        node = node->next;
+        fprintf(fp, "\t%d:<next> -> %d;\n", i, - list->ptr[i].next);
+        i = - list->ptr[i].next;
     }
     fprintf(fp, "\t}\n}");
     fclose(fp);
@@ -193,29 +182,29 @@ elem_type get_val (list_node* node)
     return node->val;
 }
 
-list_node* get_next (list_node* node)
+list_node* get_next (list_t* list, list_node* node)
 {
-    return node->next;
+    return list->ptr + node->next;
 }
 
-list_node* get_prev (list_node* node)
+list_node* get_prev (list_t* list, list_node* node)
 {
-    return node->prev;
+    return list->ptr + node->prev;
 }
 
 list_node* get_start (list_t* list)
 {
-    return list->ptr[0].next;
+    return list->ptr + list->ptr[0].next;
 }
 
 list_node* get_end (list_t* list)
 {
-    return list->ptr[0].prev;
+    return list->ptr + list->ptr[0].prev;
 }
 
 list_node* list_push_back (list_t* list, elem_type val)
 {
-    return list_insert(list, list->ptr[0].prev, val);
+    return list_insert(list, list->ptr + list->ptr[0].prev, val);
 }
 
 list_node* list_push_front (list_t* list, elem_type val)
@@ -225,7 +214,7 @@ list_node* list_push_front (list_t* list, elem_type val)
 
 list_node* list_pop_back (list_t* list)
 {
-    return list_pop(list, list->ptr[0].prev);
+    return list_pop(list, list->ptr + list->ptr[0].prev);
 }
 
 list_node* list_pop_front (list_t* list)
@@ -248,7 +237,7 @@ static int resize(list_t* list, size_t new_capacity)
     {
         list->ptr[i].prev = 0;
         list->ptr[i].val = POISON;
-        list->ptr[i].next = list->ptr + i;
+        list->ptr[i].next = - (int)(i + 1);
     }
 
     return 0;
